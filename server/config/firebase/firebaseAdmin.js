@@ -1,17 +1,18 @@
-import admin from 'firebase-admin';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import admin from "firebase-admin";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 
-// Needed to get __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const serviceAccount = require("./serviceAccountKey.json");
 
-// Load the service account JSON directly
-const serviceAccount = path.join(__dirname, 'serviceAccountKey.json');
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    projectId: serviceAccount.project_id,
+  });
+  
+}
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+const auth = admin.auth();
+const db = admin.firestore();
 
-export const auth = admin.auth();
-export default admin;
+export { admin, auth, db };

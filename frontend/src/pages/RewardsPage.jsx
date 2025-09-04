@@ -353,7 +353,7 @@ export function RewardsPage() {
                                 {myRewards.map((reward) => (
                                     <Card
                                         key={reward.id}
-                                        className="border-0 shadow-lg overflow-hidden border-2 border-emerald-200"
+                                        className=" shadow-lg overflow-hidden border-2 border-emerald-200"
                                     >
                                         <div className="aspect-video bg-gradient-to-br from-green-100 to-emerald-200 flex items-center justify-center">
                                             {getIcon(reward.category)}

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
+import { AppContext } from '../context/AppContext';
+import axios from 'axios';
 import {
     Trophy,
     Recycle,
@@ -17,32 +19,123 @@ import {
     MapPin,
     Calendar,
     Target,
-    Zap
+    Zap,
+    Loader
 } from 'lucide-react';
 
 export function StudentDashboard() {
     const navigate = useNavigate();
+    const { backEndUrl, userData, getUserData, isLoggedIn } = useContext(AppContext);
     const [showQR, setShowQR] = useState(false);
+    const [studentData, setStudentData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const studentData = {
-        name: "Alex Johnson",
-        studentId: "ST123456",
-        totalPoints: 2450,
-        currentStreak: 7,
-        totalItemsRecycled: 89,
-        nextRewardAt: 2500,
-        level: "Green Champion",
-        monthlyGoal: 100,
-        monthlyProgress: 67,
-        weeklyRanking: 15,
-        impactSaved: {
-            co2: "12.5 kg",
-            water: "450 L",
-            energy: "25 kWh"
+    useEffect(() => {
+        const fetchStudentData = async () => {
+            try {
+                setLoading(true);
+
+                // First ensure we have user data from context
+                if (!userData && isLoggedIn) {
+                    await getUserData();
+                }
+
+                // Fetch detailed student data from your API
+                const { data } = await axios.get(`${backEndUrl}/api/user/data`, {
+                    withCredentials: true
+                });
+
+                if (data.success) {
+                    // Set student data with fallback values
+                    const profile = data.user.profile;
+                    setStudentData({
+                        // Basic info
+                        firstName: profile.firstName || 'Student',
+                        lastName: profile.lastName || '',
+                        studentId: profile.studentId || data.user.id,
+                        email: profile.email || data.user.email,
+
+                        // Stats with fallback values
+                        totalPoints: profile.totalPoints || 0,
+                        currentStreak: profile.currentStreak || 0,
+                        totalItemsRecycled: profile.totalItemsRecycled || 0,
+                        nextRewardAt: profile.nextRewardAt || 2500,
+                        level: profile.level || 'Eco Beginner',
+                        monthlyGoal: profile.monthlyGoal || 100,
+                        monthlyProgress: profile.monthlyProgress || 0,
+                        weeklyRanking: profile.weeklyRanking || 0,
+
+                        // Environmental impact
+                        impactSaved: {
+                            co2: profile.impactSaved?.co2 || '0 kg',
+                            water: profile.impactSaved?.water || '0 L',
+                            energy: profile.impactSaved?.energy || '0 kWh'
+                        },
+
+                        // Activity data (you may need to fetch this separately)
+                        recentActivity: profile.recentActivity || [],
+                        achievements: profile.achievements || [],
+                        nearbyBins: profile.nearbyBins || []
+                    });
+                } else {
+                    setError('Failed to fetch student data.');
+                }
+            } catch (err) {
+                console.error('Error fetching student data:', err);
+                setError('Server error. Could not fetch data.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (isLoggedIn) {
+            fetchStudentData();
+        } else {
+            setLoading(false);
+            setError('Please log in to view dashboard.');
         }
+    }, [backEndUrl, userData, getUserData, isLoggedIn]);
+
+    const handleNavigateToRewards = () => {
+        navigate('/rewards');
     };
 
-    const recentActivity = [
+    // Loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-emerald-50/50 to-blue-50/50 flex items-center justify-center">
+                <div className="text-center">
+                    <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-emerald-600" />
+                    <p className="text-lg text-slate-600">Loading your dashboard...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-emerald-50/50 to-blue-50/50 flex items-center justify-center">
+                <Card className="w-full max-w-md">
+                    <CardContent className="p-6 text-center">
+                        <div className="text-red-500 text-lg font-semibold mb-2">Oops!</div>
+                        <p className="text-slate-600 mb-4">{error}</p>
+                        <Button onClick={() => window.location.reload()} variant="outline">
+                            Try Again
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (!studentData) {
+        return null;
+    }
+
+    // Default data for features not yet implemented
+    const defaultRecentActivity = [
         {
             date: 'Today',
             items: 5,
@@ -69,28 +162,19 @@ export function StudentDashboard() {
             location: 'Cafeteria East',
             time: '1:15 PM',
             icon: <Recycle className="w-5 h-5" />
-        },
-        {
-            date: '3 days ago',
-            items: 12,
-            points: 60,
-            type: 'Mixed Items',
-            location: 'Dormitory A',
-            time: '4:20 PM',
-            icon: <Recycle className="w-5 h-5" />
         }
     ];
 
-    const achievements = [
+    const defaultAchievements = [
         { name: 'First Steps', description: 'Completed your first recycling', earned: true, points: 50 },
-        { name: 'Streak Master', description: '7-day recycling streak', earned: true, points: 100 },
-        { name: 'Paper Champion', description: '50 paper items recycled', earned: true, points: 75 },
-        { name: 'Plastic Warrior', description: '100 plastic items (Progress: 45/100)', earned: false, points: 150 },
-        { name: 'Green Guardian', description: '200 total items (Progress: 89/200)', earned: false, points: 200 },
-        { name: 'Eco Legend', description: 'Reach 5000 points', earned: false, points: 500 }
+        { name: 'Streak Master', description: '7-day recycling streak', earned: studentData.currentStreak >= 7, points: 100 },
+        { name: 'Paper Champion', description: '50 paper items recycled', earned: false, points: 75 },
+        { name: 'Plastic Warrior', description: '100 plastic items', earned: false, points: 150 },
+        { name: 'Green Guardian', description: '200 total items', earned: studentData.totalItemsRecycled >= 200, points: 200 },
+        { name: 'Eco Legend', description: 'Reach 5000 points', earned: studentData.totalPoints >= 5000, points: 500 }
     ];
 
-    const nearbyBins = [
+    const defaultNearbyBins = [
         {
             name: 'Library Main Entrance',
             distance: '50m',
@@ -125,12 +209,12 @@ export function StudentDashboard() {
         }
     ];
 
-    const pointsToNextReward = studentData.nextRewardAt - studentData.totalPoints;
-    const progressPercentage = (studentData.totalPoints / studentData.nextRewardAt) * 100;
+    const recentActivity = studentData.recentActivity.length > 0 ? studentData.recentActivity : defaultRecentActivity;
+    const achievements = studentData.achievements.length > 0 ? studentData.achievements : defaultAchievements;
+    const nearbyBins = studentData.nearbyBins.length > 0 ? studentData.nearbyBins : defaultNearbyBins;
 
-    const handleNavigateToRewards = () => {
-        navigate('/rewards');
-    };
+    const pointsToNextReward = Math.max(0, studentData.nextRewardAt - studentData.totalPoints);
+    const progressPercentage = Math.min(100, (studentData.totalPoints / studentData.nextRewardAt) * 100);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-emerald-50/50 to-blue-50/50">
@@ -139,7 +223,9 @@ export function StudentDashboard() {
                 <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-8 rounded-2xl shadow-lg">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                         <div className="flex-1">
-                            <h1 className="text-3xl font-bold mb-2">Welcome back, {studentData.name}!</h1>
+                            <h1 className="text-3xl font-bold mb-2">
+                                Welcome back, {studentData.firstName} {studentData.lastName}!
+                            </h1>
                             <p className="text-emerald-100 mb-4 text-lg">
                                 You're making a real difference! Keep up the great work protecting our environment.
                             </p>
@@ -148,10 +234,12 @@ export function StudentDashboard() {
                                     <Trophy className="w-4 h-4 mr-2" />
                                     {studentData.level}
                                 </Badge>
-                                <Badge className="bg-white/20 text-white border-white/30 px-3 py-1">
-                                    <Target className="w-4 h-4 mr-2" />
-                                    Rank #{studentData.weeklyRanking} This Week
-                                </Badge>
+                                {studentData.weeklyRanking > 0 && (
+                                    <Badge className="bg-white/20 text-white border-white/30 px-3 py-1">
+                                        <Target className="w-4 h-4 mr-2" />
+                                        Rank #{studentData.weeklyRanking} This Week
+                                    </Badge>
+                                )}
                             </div>
                         </div>
                         <Button
@@ -174,7 +262,9 @@ export function StudentDashboard() {
                                 <div className="w-64 h-64 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-2xl mx-auto mb-6 flex items-center justify-center border-4 border-emerald-200">
                                     <div className="text-center">
                                         <QrCode className="w-32 h-32 text-emerald-600 mx-auto mb-2" />
-                                        <div className="text-sm font-mono text-emerald-700">ID: {studentData.studentId}</div>
+                                        <div className="text-sm font-mono text-emerald-700">
+                                            ID: {studentData.studentId}
+                                        </div>
                                     </div>
                                 </div>
                                 <h3 className="text-xl font-semibold mb-2">Your Personal QR Code</h3>
@@ -195,7 +285,7 @@ export function StudentDashboard() {
                                 <span className="text-2xl font-bold">{studentData.totalPoints.toLocaleString()}</span>
                             </div>
                             <div className="text-sm text-slate-600 font-medium">Total Points Earned</div>
-                            <div className="text-xs text-emerald-600 mt-1">+170 this week</div>
+                            <div className="text-xs text-emerald-600 mt-1">Keep earning!</div>
                         </CardContent>
                     </Card>
 
@@ -206,7 +296,7 @@ export function StudentDashboard() {
                                 <span className="text-2xl font-bold">{studentData.totalItemsRecycled}</span>
                             </div>
                             <div className="text-sm text-slate-600 font-medium">Items Recycled</div>
-                            <div className="text-xs text-emerald-600 mt-1">+28 this month</div>
+                            <div className="text-xs text-emerald-600 mt-1">Great progress!</div>
                         </CardContent>
                     </Card>
 
@@ -217,7 +307,9 @@ export function StudentDashboard() {
                                 <span className="text-2xl font-bold">{studentData.currentStreak}</span>
                             </div>
                             <div className="text-sm text-slate-600 font-medium">Day Streak</div>
-                            <div className="text-xs text-orange-600 mt-1">Keep it up!</div>
+                            <div className="text-xs text-orange-600 mt-1">
+                                {studentData.currentStreak > 0 ? 'Keep it up!' : 'Start your streak!'}
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -228,7 +320,9 @@ export function StudentDashboard() {
                                 <span className="text-2xl font-bold">{pointsToNextReward}</span>
                             </div>
                             <div className="text-sm text-slate-600 font-medium">Points to Next Reward</div>
-                            <div className="text-xs text-purple-600 mt-1">So close!</div>
+                            <div className="text-xs text-purple-600 mt-1">
+                                {pointsToNextReward === 0 ? 'Reward available!' : 'Almost there!'}
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -249,7 +343,11 @@ export function StudentDashboard() {
                             </div>
                             <Progress value={progressPercentage} className="h-3" />
                             <p className="text-sm text-slate-600">
-                                Just <span className="font-semibold text-emerald-600">{pointsToNextReward} more points</span> to unlock your next reward!
+                                {pointsToNextReward > 0 ? (
+                                    <>Just <span className="font-semibold text-emerald-600">{pointsToNextReward} more points</span> to unlock your next reward!</>
+                                ) : (
+                                    <span className="font-semibold text-emerald-600">Congratulations! You've earned a reward!</span>
+                                )}
                             </p>
                             <Button onClick={handleNavigateToRewards} className="w-full bg-emerald-600 hover:bg-emerald-700">
                                 Browse Rewards Catalog
@@ -303,27 +401,34 @@ export function StudentDashboard() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-4">
-                                    {recentActivity.map((activity, index) => (
-                                        <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-                                                    {activity.icon}
-                                                </div>
-                                                <div>
-                                                    <div className="font-semibold">{activity.type}</div>
-                                                    <div className="text-sm text-slate-600">
-                                                        {activity.items} items • {activity.location} • {activity.time}
+                                {recentActivity.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {recentActivity.map((activity, index) => (
+                                            <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                                                        {activity.icon || <Recycle className="w-5 h-5" />}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-semibold">{activity.type}</div>
+                                                        <div className="text-sm text-slate-600">
+                                                            {activity.items} items • {activity.location} • {activity.time}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <div className="text-right">
+                                                    <div className="text-lg font-bold text-emerald-600">+{activity.points}</div>
+                                                    <div className="text-sm text-slate-500">{activity.date}</div>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <div className="text-lg font-bold text-emerald-600">+{activity.points}</div>
-                                                <div className="text-sm text-slate-500">{activity.date}</div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-slate-500">
+                                        <Recycle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                        <p>No recent activity yet. Start recycling to see your impact!</p>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>

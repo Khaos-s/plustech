@@ -4,22 +4,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Separator } from '../components/ui/separator';
-import { ArrowLeft, Leaf, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Leaf, Mail, Lock, Eye, EyeOff, AlertCircle, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../firebase/firebaseConfig';
-import { signInWithEmailAndPassword } from "firebase/auth";
-import axios from 'axios';
 import { toast } from 'sonner';
 import { AppContext } from '../context/AppContext';
-import { getFirebaseErrorMessage } from '../components/utils/firebaseErrors';
 
 export function Login() {
     const navigate = useNavigate();
-    const { backEndUrl, setIsLoggedIn, getUserData } = useContext(AppContext);
+    const { loginWithFirebase, resendVerificationEmail } = useContext(AppContext);
 
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [formErrors, setFormErrors] = useState({});
+    const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
+    const [resendingVerification, setResendingVerification] = useState(false);
 
     const [formData, setFormData] = useState({
         email: '',
@@ -54,115 +52,61 @@ export function Login() {
 
         setLoading(true);
         setFormErrors({});
+        setShowVerificationPrompt(false);
 
         try {
-            // Step 1: Authenticate with Firebase
-            let firebaseIdToken = null;
-            let firebaseUser = null;
+            const result = await loginWithFirebase(
+                formData.email.toLowerCase().trim(),
+                formData.password
+            );
 
-            try {
-                const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-                firebaseUser = userCredential.user;
-                firebaseIdToken = await firebaseUser.getIdToken();
-            } catch (firebaseError) {
-                console.error('Firebase authentication error:', firebaseError);
-
-                // Handle specific Firebase auth errors
-                if (firebaseError.code === 'auth/user-not-found') {
-                    toast.error("No account found with this email address.");
-                } else if (firebaseError.code === 'auth/wrong-password') {
-                    toast.error("Incorrect password. Please try again.");
-                } else if (firebaseError.code === 'auth/invalid-email') {
-                    toast.error("Please enter a valid email address.");
-                } else if (firebaseError.code === 'auth/user-disabled') {
-                    toast.error("This account has been disabled. Contact support.");
-                } else if (firebaseError.code === 'auth/too-many-requests') {
-                    toast.error("Too many failed attempts. Please try again later.");
-                } else {
-                    toast.error(getFirebaseErrorMessage(firebaseError));
-                }
-                return;
-            }
-
-            // Step 2: Authenticate with backend using Firebase token
-            const loginPayload = {
-                email: formData.email.toLowerCase().trim(),
-                password: formData.password,
-                firebaseIdToken,
-                firebaseUid: firebaseUser.uid
-            };
-
-            const response = await axios.post(`${backEndUrl}/api/auth/login`, loginPayload, {
-                withCredentials: true,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${firebaseIdToken}`
-                },
-                timeout: 10000 // 10 second timeout
-            });
-
-            if (response.data && response.data.success) {
+            if (result.success) {
                 toast.success("Login successful!");
 
-                // Update global state
-                setIsLoggedIn(true);
-
-                // Fetch user data
-                try {
-                    await getUserData();
-                } catch (userDataError) {
-                    console.warn('Failed to fetch user data:', userDataError);
-                    // Don't fail login if we can't fetch user data
-                }
-
                 // Navigate based on user role
-                const userRole = response.data.user?.role;
+                const userRole = result.user?.role;
                 if (userRole === 'admin') {
                     navigate('/admin');
                 } else {
                     navigate('/dashboard');
                 }
             } else {
-                toast.error(response.data?.message || "Invalid credentials. Please try again.");
+                if (result.requiresVerification) {
+                    setShowVerificationPrompt(true);
+                    toast.error(result.message);
+                } else {
+                    toast.error(result.message || "Login failed. Please try again.");
+                }
             }
 
         } catch (error) {
             console.error('Login error:', error);
-
-            // Handle different types of errors
-            if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-                toast.error("Request timeout. Please check your connection and try again.");
-            } else if (error.response) {
-                // Server responded with error status
-                const errorMessage = error.response.data?.message || error.response.data?.error;
-
-                if (error.response.status === 401) {
-                    toast.error("Invalid email or password. Please try again.");
-                } else if (error.response.status === 403) {
-                    toast.error("Account access denied. Contact support if this continues.");
-                } else if (error.response.status === 429) {
-                    toast.error("Too many login attempts. Please wait and try again.");
-                } else if (error.response.status >= 500) {
-                    toast.error("Server error. Please try again later.");
-                } else {
-                    toast.error(errorMessage || "Login failed. Please try again.");
-                }
-            } else if (error.request) {
-                // Request was made but no response received
-                toast.error("Unable to connect to server. Please check your network connection.");
-            } else {
-                // Something else happened
-                toast.error("An unexpected error occurred. Please try again.");
-            }
-
-            // Sign out from Firebase if backend login failed
-            try {
-                await auth.signOut();
-            } catch (signOutError) {
-                console.warn('Failed to sign out from Firebase:', signOutError);
-            }
+            toast.error("An unexpected error occurred. Please try again.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        if (!formData.email) {
+            toast.error("Please enter your email address first");
+            return;
+        }
+
+        setResendingVerification(true);
+
+        try {
+            const result = await resendVerificationEmail(formData.email.toLowerCase().trim());
+            
+            if (result.success) {
+                toast.success("Verification email sent! Please check your inbox.");
+            } else {
+                toast.error(result.message || "Failed to send verification email");
+            }
+        } catch (error) {
+            toast.error("Failed to resend verification email");
+        } finally {
+            setResendingVerification(false);
         }
     };
 
@@ -173,7 +117,6 @@ export function Login() {
             [name]: value
         }));
 
-        // Clear field error when user starts typing
         if (formErrors[name]) {
             setFormErrors(prev => ({
                 ...prev,
@@ -212,6 +155,36 @@ export function Login() {
                     </CardHeader>
 
                     <CardContent>
+                        {showVerificationPrompt && (
+                            <div className="mb-6 p-4 border border-amber-200 bg-amber-50 rounded-lg">
+                                <div className="flex items-start space-x-3">
+                                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                                    <div className="flex-1">
+                                        <h4 className="text-sm font-medium text-amber-800">Email Verification Required</h4>
+                                        <p className="text-sm text-amber-700 mt-1">
+                                            Please verify your email address before logging in. Check your inbox for the verification link.
+                                        </p>
+                                        <Button
+                                            variant="link"
+                                            size="sm"
+                                            onClick={handleResendVerification}
+                                            disabled={resendingVerification}
+                                            className="px-0 text-amber-700 hover:text-amber-800 h-auto mt-2"
+                                        >
+                                            {resendingVerification ? (
+                                                <>
+                                                    <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                                                    Sending...
+                                                </>
+                                            ) : (
+                                                'Resend verification email'
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>

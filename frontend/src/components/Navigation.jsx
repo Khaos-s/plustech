@@ -1,6 +1,6 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
-import { Recycle, User, Settings, Gift, ArrowRight, LogOut, ChevronDown, UserCircle } from "lucide-react";
+import { Recycle, User, Settings, Gift, ArrowRight, LogOut, ChevronDown, UserCircle, Award } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 export function Navigation() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { isLoggedIn, userData, setIsLoggedIn, setUserData, backEndUrl } = useContext(AppContext);
+    const { isLoggedIn, userData, setIsLoggedIn, setUserData, backEndUrl, logout } = useContext(AppContext);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -17,20 +17,15 @@ export function Navigation() {
         navigate('/login');
     };
 
+    //  logout function
     const handleLogout = async () => {
-        try {
-            await axios.post(backEndUrl + '/api/auth/logout', {}, { withCredentials: true });
-            setIsLoggedIn(false);
-            setUserData(null);
-            navigate('/');
-            toast.success('Logged out successfully');
-        } catch (error) {
-            console.error('Logout error:', error);
-            // Even if backend logout fails, clear frontend state
-            setIsLoggedIn(false);
-            setUserData(null);
-            navigate('/');
+        const result = await logout();
+        if (result.success) {
+            toast.success(result.message);
+        } else {
+            toast.error(result.message);
         }
+        navigate('/');
         setIsProfileDropdownOpen(false);
     };
 
@@ -44,7 +39,6 @@ export function Navigation() {
     };
 
     const handleSettings = () => {
-        // Navigate to settings page when implemented
         navigate('/settings');
         setIsProfileDropdownOpen(false);
     };
@@ -67,6 +61,17 @@ export function Navigation() {
     const getUserInitials = (email) => {
         if (!email) return 'U';
         return email.charAt(0).toUpperCase();
+    };
+
+    const getUserDisplayName = () => {
+        if (userData?.firstName && userData?.lastName) {
+            return `${userData.firstName} ${userData.lastName}`;
+        } else if (userData?.firstName) {
+            return userData.firstName;
+        } else if (userData?.email) {
+            return userData.email.split('@')[0]; // Use email prefix if no name
+        }
+        return 'User';
     };
 
     return (
@@ -103,14 +108,15 @@ export function Navigation() {
                             </>
                         )}
 
-                        {isLoggedIn && userData?.role === 'admin' && (
+                        {/* Add Earning System link for all users */}
+                        {!isLoggedIn && (
                             <Button
-                                variant={location.pathname === '/admin' ? 'default' : 'ghost'}
+                                variant={location.pathname === '/earning-system' ? 'default' : 'ghost'}
                                 asChild
                             >
-                                <Link to="/admin" className="flex items-center gap-2">
-                                    <Settings className="w-4 h-4" />
-                                    Admin Dashboard
+                                <Link to="/earning-system" className="flex items-center gap-2">
+                                    <Award className="w-4 h-4" />
+                                    How to Earn
                                 </Link>
                             </Button>
                         )}
@@ -127,7 +133,7 @@ export function Navigation() {
                                         {getUserInitials(userData?.email)}
                                     </div>
                                     <span className="text-sm text-gray-700 max-w-32 truncate">
-                                        {userData?.email}
+                                        {getUserDisplayName()}
                                     </span>
                                     <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
                                 </Button>
@@ -143,7 +149,7 @@ export function Navigation() {
                                                 </div>
                                                 <div>
                                                     <div className="font-medium text-gray-900">
-                                                        {userData?.name || 'User'}
+                                                        {getUserDisplayName()}
                                                     </div>
                                                     <div className="text-sm text-gray-500">
                                                         {userData?.email}
@@ -172,6 +178,15 @@ export function Navigation() {
                                                     Rewards
                                                 </Link>
                                             )}
+
+                                            <Link
+                                                to="/earning-system"
+                                                onClick={() => setIsProfileDropdownOpen(false)}
+                                                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <Award className="w-4 h-4 text-gray-400" />
+                                                How to Earn
+                                            </Link>
 
                                             <button
                                                 onClick={handleSettings}

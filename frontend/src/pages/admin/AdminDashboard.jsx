@@ -1,175 +1,183 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Progress } from '../../components/ui/progress';
 import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    LineChart,
-    Line,
-    PieChart,
-    Pie,
-    Cell
-} from 'recharts';
-import {
-    Users,
+    TrendingUp,
+    TrendingDown,
+    Plus,
     Recycle,
-    MapPin,
+    CheckCircle,
     AlertTriangle,
-    Settings,
-    Activity,
-    Award
+    Clock,
+    MoreHorizontal
 } from 'lucide-react';
 
 export function AdminDashboard() {
-    // Mock data - in real app, this would come from API
-    const systemStats = {
-        totalStudents: 2543,
-        activeToday: 156,
-        totalBins: 15,
-        activeBins: 14,
-        itemsToday: 342,
-        itemsThisMonth: 8756,
-        pointsAwarded: 43780,
-        rewardsRedeemed: 287
+    const dashboardStats = {
+        totalStudents: 1234,
+        totalStudentsChange: -20,
+        activeUsers: 45678,
+        activeUsersChange: 12.5,
+        totalRecycled: 89567,
+        totalRecycledChange: 8.3,
+        pointsAwarded: 2450000,
+        pointsAwardedChange: 15.2
     };
 
-    const weeklyData = [
-        { day: 'Mon', items: 245, students: 89 },
-        { day: 'Tue', items: 312, students: 124 },
-        { day: 'Wed', items: 278, students: 98 },
-        { day: 'Thu', items: 356, students: 142 },
-        { day: 'Fri', items: 423, students: 178 },
-        { day: 'Sat', items: 189, students: 67 },
-        { day: 'Sun', items: 134, students: 45 }
+    const binManagementData = [
+        {
+            id: 1,
+            location: 'Library Main Entrance',
+            type: 'Smart Bin',
+            status: 'Active',
+            capacity: 85,
+            target: 90,
+            limit: 100,
+            reviewer: 'Eddie Lake',
+            lastMaintenance: '2 days ago'
+        },
+        // ... more data
     ];
 
-    const materialData = [
-        { name: 'Plastic Bottles', value: 35, color: '#8884d8' },
-        { name: 'Aluminum Cans', value: 28, color: '#82ca9d' },
-        { name: 'Paper', value: 22, color: '#ffc658' },
-        { name: 'Glass', value: 10, color: '#ff7300' },
-        { name: 'Other', value: 5, color: '#00ff88' }
+    const recentActivity = [
+        { student: 'Alex Johnson', action: 'Recycled 5 plastic bottles', points: 25, time: '2 min ago', location: 'Library Main' },
+        { student: 'Sarah Chen', action: 'Recycled 8 paper items', points: 40, time: '5 min ago', location: 'Student Center' },
+        // ... more data
     ];
-
-    const binLocations = [
-        { name: 'Library Main', capacity: 85, status: 'Normal', itemsToday: 45, lastCollection: '2 hours ago' },
-        { name: 'Student Center L2', capacity: 92, status: 'Normal', itemsToday: 38, lastCollection: '4 hours ago' },
-        { name: 'Cafeteria East', capacity: 100, status: 'Full', itemsToday: 67, lastCollection: '8 hours ago' },
-        { name: 'Dormitory A', capacity: 67, status: 'Normal', itemsToday: 23, lastCollection: '1 hour ago' },
-        { name: 'Recreation Center', capacity: 78, status: 'Normal', itemsToday: 34, lastCollection: '3 hours ago' },
-        { name: 'Engineering Building', capacity: 43, status: 'Low', itemsToday: 12, lastCollection: '6 hours ago' },
-        { name: 'Business School', capacity: 89, status: 'Normal', itemsToday: 56, lastCollection: '5 hours ago' },
-        { name: 'Science Complex', capacity: 91, status: 'Normal', itemsToday: 41, lastCollection: '2 hours ago' }
-    ];
-
-    const recentAlerts = [
-        { type: 'full', location: 'Cafeteria East', time: '15 minutes ago', severity: 'high' },
-        { type: 'maintenance', location: 'Library Main', time: '2 hours ago', severity: 'medium' },
-        { type: 'low', location: 'Engineering Building', time: '4 hours ago', severity: 'low' }
-    ];
-
-    const topStudents = [
-        { name: 'Sarah Chen', points: 3450, items: 142, streak: 21 },
-        { name: 'Mike Johnson', points: 2890, items: 118, streak: 15 },
-        { name: 'Emma Davis', points: 2650, items: 106, streak: 18 },
-        { name: 'Alex Rodriguez', points: 2450, items: 98, streak: 12 },
-        { name: 'Lisa Park', points: 2340, items: 89, streak: 9 }
-    ];
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Full': return 'destructive';
-            case 'Low': return 'secondary';
-            case 'Normal': return 'default';
-            default: return 'default';
-        }
-    };
-
-    const getAlertIcon = (type) => {
-        switch (type) {
-            case 'full': return <AlertTriangle className="w-4 h-4 text-red-500" />;
-            case 'maintenance': return <Settings className="w-4 h-4 text-yellow-500" />;
-            case 'low': return <Activity className="w-4 h-4 text-blue-500" />;
-            default: return <AlertTriangle className="w-4 h-4" />;
-        }
-    };
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-secondary/10 p-6 rounded-xl">
-                <h1 className="text-2xl mb-2">PLUSTECH Admin Dashboard</h1>
-                <p className="text-muted-foreground">
-                    Monitor and manage your smart bin recycling network across campus
-                </p>
+        <div className="p-8">
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold mb-1">PlusTech Dashboard</h1>
+                    <p className="text-gray-400">Monitor student engagement and system performance</p>
+                </div>
+                <Button className="bg-emerald-600 hover:bg-emerald-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Smart Bin
+                </Button>
             </div>
 
-            {/* Key Metrics */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card>
-                    <CardContent className="p-6 text-center">
-                        <Users className="w-8 h-8 text-blue-500 mx-auto mb-3" />
-                        <div className="text-2xl mb-1">{systemStats.totalStudents.toLocaleString()}</div>
-                        <div className="text-sm text-muted-foreground">Total Students</div>
-                        <div className="text-xs text-green-600 mt-1">
-                            +{systemStats.activeToday} active today
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <Card className="bg-gray-900 border-gray-800">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-emerald-500" />
+                                <span className="text-green-500 text-sm">+{dashboardStats.pointsAwardedChange}%</span>
+                            </div>
                         </div>
+                        <div className="text-3xl font-bold mb-1">{dashboardStats.pointsAwarded.toLocaleString()}</div>
+                        <div className="text-gray-400 text-sm">Total Points Awarded</div>
+                        <div className="text-emerald-500 text-xs mt-1">Strong engagement this month</div>
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardContent className="p-6 text-center">
-                        <Recycle className="w-8 h-8 text-green-500 mx-auto mb-3" />
-                        <div className="text-2xl mb-1">{systemStats.itemsThisMonth.toLocaleString()}</div>
-                        <div className="text-sm text-muted-foreground">Items This Month</div>
-                        <div className="text-xs text-green-600 mt-1">
-                            +{systemStats.itemsToday} today
+                <Card className="bg-gray-900 border-gray-800">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <TrendingDown className="w-5 h-5 text-red-500" />
+                                <span className="text-red-500 text-sm">{dashboardStats.totalStudentsChange}%</span>
+                            </div>
                         </div>
+                        <div className="text-3xl font-bold mb-1">{dashboardStats.totalStudents.toLocaleString()}</div>
+                        <div className="text-gray-400 text-sm">New Students</div>
+                        <div className="text-red-400 text-xs mt-1">Registration needs attention</div>
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardContent className="p-6 text-center">
-                        <MapPin className="w-8 h-8 text-purple-500 mx-auto mb-3" />
-                        <div className="text-2xl mb-1">{systemStats.activeBins}/{systemStats.totalBins}</div>
-                        <div className="text-sm text-muted-foreground">Active Bins</div>
-                        <div className="text-xs text-green-600 mt-1">
-                            {((systemStats.activeBins / systemStats.totalBins) * 100).toFixed(1)}% operational
+                <Card className="bg-gray-900 border-gray-800">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-emerald-500" />
+                                <span className="text-green-500 text-sm">+{dashboardStats.activeUsersChange}%</span>
+                            </div>
                         </div>
+                        <div className="text-3xl font-bold mb-1">{dashboardStats.activeUsers.toLocaleString()}</div>
+                        <div className="text-gray-400 text-sm">Active Users</div>
+                        <div className="text-emerald-500 text-xs mt-1">Engagement exceeds targets</div>
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardContent className="p-6 text-center">
-                        <Award className="w-8 h-8 text-yellow-500 mx-auto mb-3" />
-                        <div className="text-2xl mb-1">{systemStats.pointsAwarded.toLocaleString()}</div>
-                        <div className="text-sm text-muted-foreground">Points Awarded</div>
-                        <div className="text-xs text-green-600 mt-1">
-                            {systemStats.rewardsRedeemed} rewards redeemed
+                <Card className="bg-gray-900 border-gray-800">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-emerald-500" />
+                                <span className="text-green-500 text-sm">+{dashboardStats.totalRecycledChange}%</span>
+                            </div>
                         </div>
+                        <div className="text-3xl font-bold mb-1">{dashboardStats.totalRecycled.toLocaleString()}</div>
+                        <div className="text-gray-400 text-sm">Items Recycled</div>
+                        <div className="text-emerald-500 text-xs mt-1">Steady performance increase</div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Main Content */}
-            <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="bins">Bin Management</TabsTrigger>
-                    <TabsTrigger value="students">Students</TabsTrigger>
-                    <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                </TabsList>
+            {/* Chart Section */}
+            <Card className="bg-gray-900 border-gray-800 mb-8">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-white">System Activity</CardTitle>
+                        <p className="text-gray-400 text-sm">Recycling activity for the last 3 months</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="bg-gray-800 border-gray-700 text-gray-300">
+                            Last 3 months
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-gray-400">
+                            Last 30 days
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-gray-400">
+                            Last 7 days
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="h-64 bg-gray-850 rounded-lg flex items-center justify-center">
+                        <div className="text-gray-500 text-center">
+                            <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <p>Activity Chart Placeholder</p>
+                            <p className="text-xs">Integration with chart library needed</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
-                {/* Tabs content here... same as your code */}
-            </Tabs>
+            {/* Recent Activity */}
+            <Card className="bg-gray-900 border-gray-800">
+                <CardHeader>
+                    <CardTitle>Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {recentActivity.map((activity, index) => (
+                            <div key={index} className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-emerald-900 rounded-lg flex items-center justify-center">
+                                        <Recycle className="w-5 h-5 text-emerald-400" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium">{activity.student}</div>
+                                        <div className="text-sm text-gray-400">
+                                            {activity.action} • {activity.location}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-emerald-400 font-medium">+{activity.points} pts</div>
+                                    <div className="text-xs text-gray-400">{activity.time}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }
